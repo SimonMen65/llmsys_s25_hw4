@@ -1,4 +1,5 @@
 import sys
+import torch.multiprocessing as mp
 from pathlib import Path
 
 cousin_dir = Path(__file__).resolve().parents[1]
@@ -173,6 +174,7 @@ def run_dp(
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn', force=True)
     parser = argparse.ArgumentParser()
     parser.add_argument('--pytest', type=bool, default=False)
     parser.add_argument('--dataset', type=str, default='bbaaaa/iwslt14-de-en-preprocess')
