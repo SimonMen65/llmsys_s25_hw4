@@ -33,7 +33,11 @@ def average_gradients(model):
     3. Average the gradients over the world_size (total number of devices)
     '''
     # BEGIN SOLUTION
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    world_size = dist.get_world_size()
+    for param in model.parameters():
+        if param.grad is not None:
+            dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
+            param.grad.data /= world_size
     # END SOLUTION
 
 # ASSIGNMENT 4.1
@@ -44,7 +48,9 @@ def setup(rank, world_size, backend):
     2. Use `torch.distributed` to init the process group
     '''
     # BEGIN SOLUTION
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = "11868"
+    dist.init_process_group(backend=backend, rank=rank, world_size=world_size)
     # END SOLUTION
 
 
@@ -191,8 +197,22 @@ if __name__ == '__main__':
     2. You should start the processes to work and terminate resources properly
     '''
     # BEGIN SOLUTION
-    world_size = None  # TODO: Define the number of GPUs
-    backend = None  # TODO: Define your backend for communication, we suggest using 'nccl'
-    
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    world_size = args.world_size
+    backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+
+    for rank in range(world_size):
+        p = Process(target=run_dp, args=(
+            rank, world_size, backend),
+            kwargs={
+                'dataset_name': args.dataset,
+                'model_max_length': args.model_max_length,
+                'n_epochs': args.n_epochs,
+                'batch_size': args.batch_size,
+                'learning_rate': args.learning_rate
+            })
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
     # END SOLUTION
