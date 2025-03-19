@@ -16,7 +16,8 @@ class Partition():
     def __getitem__(self, index):
         '''Given index, get the data according to the partitioned index'''
         # BEGIN SOLUTION
-        raise NotImplementedError("Data Parallel Not Implemented Yet")
+        data_index = self.index[index]
+        return self.data[data_index]
         # END SOLUTION
 
 # ASSIGNMENT 4.1
@@ -31,7 +32,14 @@ class DataPartitioner():
         2. Create different partitions of indices according to `sizes` and store in `self.partitions`
         '''
         # BEGIN SOLUTION
-        raise NotImplementedError("Data Parallel Not Implemented Yet")
+        data_len = len(data)
+        indices = list(range(data_len))
+        rng.shuffle(indices)
+
+        for frac in sizes:
+            part_len = int(frac * data_len)
+            self.partitions.append(indices[:part_len])
+            indices = indices[part_len:]
         # END SOLUTION
 
     def use(self, partition):
@@ -40,7 +48,7 @@ class DataPartitioner():
         Just one line of code. Think it simply.
         '''
         # BEGIN SOLUTION
-        raise NotImplementedError("Data Parallel Not Implemented Yet")
+        return Partition(self.data, self.partitions[partition])
         # END SOLUTION
 
 # ASSIGNMENT 4.1
@@ -57,5 +65,18 @@ def partition_dataset(rank, world_size, dataset, batch_size=128, collate_fn=None
     4. Wrap the dataset with `DataLoader`, remember to customize the `collate_fn`
     """
     # BEGIN SOLUTION
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    sizes = [1.0 / world_size for _ in range(world_size)]
+    partitioner = DataPartitioner(dataset, sizes=sizes)
+
+    partitioned_dataset = partitioner.use(rank)
+    partition_batch_size = batch_size // world_size
+
+    dataloader = DataLoader(
+        partitioned_dataset,
+        batch_size=partition_batch_size,
+        shuffle=True,
+        collate_fn=collate_fn
+    )
+
+    return dataloader
     # END SOLUTION
