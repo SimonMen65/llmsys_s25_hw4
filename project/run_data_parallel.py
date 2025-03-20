@@ -61,7 +61,8 @@ def run_dp(
     model_max_length=128,
     n_epochs=10,
     batch_size=128,
-    learning_rate=1e-4):
+    learning_rate=1e-4,
+    pytest):
     workdir = f'./workdir'
     os.makedirs(workdir, exist_ok=True)
 
@@ -125,7 +126,7 @@ def run_dp(
                                     rank=rank,
                                     average_gradients_fn=average_gradients)
         end = time.time()
-        if not PYTEST:
+        if not pytest:
             training_time = end - start
             print(f'Epoch {epoch_idx} on Rank {rank}: Training Time = {training_time}, Tokens_per_sec = {avg_tokens_per_sec}')
             total_time.append(training_time)
@@ -166,7 +167,7 @@ def run_dp(
         else:
             save_grad_weights(model, rank)
             break
-    if not PYTEST:
+    if not pytest:
         # You only get the average training time and tokens_per_second per device
         # To compute the throughput, you need to sum up the tokens_per_sec across all the devices based on epochs
         print(f'Rank {rank} training time: avg:{np.mean(total_time)}, std:{np.std(total_time)}, \
@@ -176,7 +177,7 @@ def run_dp(
 if __name__ == '__main__':
     mp.set_start_method('spawn', force=True)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pytest', type=bool, default=True)
+    parser.add_argument('--pytest', type=bool, default=False)
     parser.add_argument('--dataset', type=str, default='bbaaaa/iwslt14-de-en-preprocess')
     parser.add_argument('--model_max_length', type=int, default=128)
     parser.add_argument('--n_epochs', type=int, default=10)
@@ -210,7 +211,8 @@ if __name__ == '__main__':
                 'model_max_length': args.model_max_length,
                 'n_epochs': args.n_epochs,
                 'batch_size': args.batch_size,
-                'learning_rate': args.learning_rate
+                'learning_rate': args.learning_rate,
+                'pytest':args.pytest
             })
         p.start()
         processes.append(p)
