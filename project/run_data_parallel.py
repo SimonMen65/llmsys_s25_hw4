@@ -176,7 +176,7 @@ def run_dp(
 if __name__ == '__main__':
     mp.set_start_method('spawn', force=True)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pytest', type=bool, default=False)
+    parser.add_argument('--pytest', type=bool, default=True)
     parser.add_argument('--dataset', type=str, default='bbaaaa/iwslt14-de-en-preprocess')
     parser.add_argument('--model_max_length', type=int, default=128)
     parser.add_argument('--n_epochs', type=int, default=10)
