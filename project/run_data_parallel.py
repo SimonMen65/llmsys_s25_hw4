@@ -62,7 +62,7 @@ def run_dp(
     n_epochs=10,
     batch_size=128,
     learning_rate=1e-4,
-    pytest):
+    pytest=False):
     workdir = f'./workdir'
     os.makedirs(workdir, exist_ok=True)
 
@@ -212,7 +212,7 @@ if __name__ == '__main__':
                 'n_epochs': args.n_epochs,
                 'batch_size': args.batch_size,
                 'learning_rate': args.learning_rate,
-                'pytest':args.pytest
+                'pytest':PYTEST
             })
         p.start()
         processes.append(p)
