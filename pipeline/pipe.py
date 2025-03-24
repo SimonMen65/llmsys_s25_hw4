@@ -61,18 +61,14 @@ class Pipe(nn.Module):
         
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
-        # 1. Split input into micro-batches
         microbatches = list(torch.chunk(x, self.split_size, dim=0))
-        batches = microbatches  # this will be updated step-by-step
+        batches = microbatches
 
-        # 2. Generate clock cycle schedule
         schedule = list(_clock_cycles(num_batches=self.split_size, num_partitions=len(self.partitions)))
 
-        # 3. Compute over clock cycles
-        for clock_step in schedule:
-            self.compute(batches, clock_step)
+        for clock in schedule:
+            self.compute(batches, clock)
 
-        # 4. Concatenate final result on last device
         return torch.cat(batches, dim=0).to(self.devices[-1])
 
 
@@ -93,13 +89,17 @@ class Pipe(nn.Module):
             partition = self.partitions[partition_idx]
             device = self.devices[partition_idx]
 
-            def fn(x, module=partition):
-                return module(x)
-
-            task = Task(fn, batches[microbatch_idx])
+            # Wrap the computation (a no-arg callable) correctly for Task
+            task = Task(lambda module=partition, x=batches[microbatch_idx]: module(x))
             self.in_queues[partition_idx].put(task)
 
         for microbatch_idx, partition_idx in schedule:
-            result = self.out_queues[partition_idx].get()
-            batches[microbatch_idx] = result
+            success, result = self.out_queues[partition_idx].get()
+            if success:
+                _, batch_output = result  # result = (task, batch_output)
+                batches[microbatch_idx] = batch_output
+            else:
+                # re-raise the exception from worker thread
+                _, exc_info = result
+                raise exc_info[1]
 
