@@ -82,17 +82,19 @@ class Pipe(nn.Module):
         3. Use the in_queues and out_queues to send and receive tasks.
         4. Store the result back to the batches.
         '''
-        partitions = self.partitions
-        devices = self.devices
-        
+        results = {}
+
         for microbatch_idx, partition_idx in schedule:
             partition = self.partitions[partition_idx]
             device = self.devices[partition_idx]
 
-            # Ensure input batch is moved to correct device before sending
-            input_batch = batches[microbatch_idx].to(device)
+            if partition_idx == 0:
+                # first partition reads from input
+                input_batch = batches[microbatch_idx].to(device)
+            else:
+                # get output of previous partition
+                input_batch = results[(microbatch_idx, partition_idx - 1)].to(device)
 
-            # Wrap the computation in a device-correct lambda
             task = Task(lambda module=partition, x=input_batch: module(x))
             self.in_queues[partition_idx].put(task)
 
@@ -100,8 +102,12 @@ class Pipe(nn.Module):
             success, result = self.out_queues[partition_idx].get()
             if success:
                 task, output = result
-                batches[microbatch_idx] = output
+                results[(microbatch_idx, partition_idx)] = output
             else:
-                exc_info = result  # <-- result is (exc_type, exc_val, tb)
+                exc_info = result
                 raise exc_info[1].with_traceback(exc_info[2])
 
+        # finally, write back only the last partition output into batches
+        last_partition = len(self.partitions) - 1
+        for i in range(self.split_size):
+            batches[i] = results[(i, last_partition)]
