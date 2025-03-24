@@ -1,1 +1,1 @@
-{"validation_loss": 5.13857214152813, "bleu": 4.025659240437357, "training_time": 49.99021649360657, "tokens_per_sec": 42797.87382454726}
+{"validation_loss": 5.390910565853119, "bleu": 4.209342253550733, "training_time": 26.55468225479126, "tokens_per_sec": 41806.11395721392}
