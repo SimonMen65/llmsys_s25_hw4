@@ -61,9 +61,20 @@ class Pipe(nn.Module):
         
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
-        # BEGIN SOLUTION
-        raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
-        # END SOLUTION
+        # 1. Split x into microbatches
+        microbatches = list(torch.chunk(x, self.split_size, dim=0))
+        batches = microbatches
+
+        # 2. Generate schedule
+        schedule = list(_clock_cycles(num_batches=self.split_size, num_partitions=len(self.partitions)))
+
+        # 3. Process each clock cycle
+        for clock in schedule:
+            self.compute(batches, clock)
+
+        # 4. Concatenate and return result on last device
+        output = torch.cat(batches, dim=0).to(self.devices[-1])
+        return output
 
     # ASSIGNMENT 4.2
     def compute(self, batches, schedule: List[Tuple[int, int]]) -> None:
@@ -78,7 +89,17 @@ class Pipe(nn.Module):
         partitions = self.partitions
         devices = self.devices
 
-        # BEGIN SOLUTION
-        raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
-        # END SOLUTION
+    for microbatch_idx, partition_idx in schedule:
+        partition = partitions[partition_idx]
+        device = devices[partition_idx]
 
+        def fn(x, module=partition):
+            return module(x)
+
+        # Create task
+        task = Task(fn, (batches[microbatch_idx],))
+        self.in_queues[partition_idx].put(task)
+
+        # Wait for result
+        result = self.out_queues[partition_idx].get()
+        batches[microbatch_idx] = result
