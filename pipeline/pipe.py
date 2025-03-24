@@ -88,6 +88,10 @@ class Pipe(nn.Module):
         for microbatch_idx, partition_idx in schedule:
             partition = self.partitions[partition_idx]
             device = self.devices[partition_idx]
+            
+            if microbatch_idx >= len(batches):
+                print(f"[WARNING] Skipping compute task: microbatch_idx={microbatch_idx} out of range (len(batches)={len(batches)}), partition_idx={partition_idx}")
+                continue  # Skip this task gracefully
 
             # Ensure input batch is moved to correct device before sending
             input_batch = batches[microbatch_idx].to(device)
