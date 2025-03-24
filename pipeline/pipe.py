@@ -96,8 +96,7 @@ class Pipe(nn.Module):
             def fn(x, module=partition):
                 return module(x)
 
-            # ✅ Correct tuple wrapping
-            task = Task((fn, (batches[microbatch_idx],)))
+            task = Task(fn, batches[microbatch_idx])
             self.in_queues[partition_idx].put(task)
 
         for microbatch_idx, partition_idx in schedule:
