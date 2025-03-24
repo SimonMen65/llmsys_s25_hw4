@@ -1,4 +1,3 @@
 __pycache__
 slurm*
-workdir
 tests/model*.pth
