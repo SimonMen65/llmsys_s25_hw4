@@ -115,5 +115,10 @@ class Pipe(nn.Module):
         # Update batches with the final output (after last partition)
         last_partition = len(self.partitions) - 1
         for i in range(self.split_size):
-            batches[i] = results[(i, last_partition)]
+            final_key = (i, last_partition)
+            if final_key in results:
+                batches[i] = results[final_key]
+            else:
+                max_partition = max(k[1] for k in results if k[0] == i)
+                batches[i] = results[(i, max_partition)]
 
