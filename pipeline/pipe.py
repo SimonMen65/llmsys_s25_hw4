@@ -65,6 +65,9 @@ class Pipe(nn.Module):
         batches = microbatches
 
         schedule = list(_clock_cycles(num_batches=self.split_size, num_partitions=len(self.partitions)))
+        print(f"[DEBUG] Pipeline Schedule (split_size={self.split_size}, num_partitions={len(self.partitions)}):")
+        for cycle_idx, clock in enumerate(schedule):
+            print(f"  Clock {cycle_idx}: {clock}")
 
         for clock in schedule:
             self.compute(batches, clock)
