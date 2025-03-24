@@ -58,9 +58,34 @@ def _split_module(modules: nn.Sequential) -> Tuple[List[nn.Sequential], List[tor
     current_partition = []
     current_device = None
     for name, module in modules.named_children():
-        # BEGIN SOLUTION
-        raise NotImplementedError("Module Splitting Not Implemented Yet")
-        # END SOLUTION
+        # Check if it's wrapped in WithDevice
+        if isinstance(module, WithDevice):
+            # New partition if current_device is different
+            if current_partition:
+                partitions.append(_assemble_partition(current_partition))
+                devices.append(current_device)
+                current_partition = []
+
+            current_device = module.device
+            current_partition.append(module.module.to(current_device))
+
+        else:
+            # Fallback: use parameter-based device detection
+            device = _retrieve_device(module)
+
+            if current_device is None:
+                current_device = device
+
+            if device != current_device:
+                # Finish previous partition
+                partitions.append(_assemble_partition(current_partition))
+                devices.append(current_device)
+
+                # Start new partition
+                current_partition = [module.to(device)]
+                current_device = device
+            else:
+                current_partition.append(module)
 
     if current_device is not None:
         partitions.append(_assemble_partition(current_partition))
