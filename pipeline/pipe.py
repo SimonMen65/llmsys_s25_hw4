@@ -84,22 +84,24 @@ class Pipe(nn.Module):
         '''
         partitions = self.partitions
         devices = self.devices
-
+        
         for microbatch_idx, partition_idx in schedule:
             partition = self.partitions[partition_idx]
             device = self.devices[partition_idx]
 
-            # Wrap the computation (a no-arg callable) correctly for Task
-            task = Task(lambda module=partition, x=batches[microbatch_idx]: module(x))
+            # Ensure input batch is moved to correct device before sending
+            input_batch = batches[microbatch_idx].to(device)
+
+            # Wrap the computation in a device-correct lambda
+            task = Task(lambda module=partition, x=input_batch: module(x))
             self.in_queues[partition_idx].put(task)
 
         for microbatch_idx, partition_idx in schedule:
             success, result = self.out_queues[partition_idx].get()
             if success:
-                _, batch_output = result  # result = (task, batch_output)
-                batches[microbatch_idx] = batch_output
+                task, output = result
+                batches[microbatch_idx] = output
             else:
-                # re-raise the exception from worker thread
-                _, exc_info = result
-                raise exc_info[1]
+                exc_info = result  # <-- result is (exc_type, exc_val, tb)
+                raise exc_info[1].with_traceback(exc_info[2])
 
