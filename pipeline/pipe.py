@@ -93,15 +93,12 @@ class Pipe(nn.Module):
             partition = self.partitions[partition_idx]
             device = self.devices[partition_idx]
 
-            # Define the task's computation
             def fn(x, module=partition):
                 return module(x)
 
-            # Send task to corresponding device queue
             task = Task(fn, (batches[microbatch_idx],))
             self.in_queues[partition_idx].put(task)
 
-        # Collect outputs from all scheduled tasks
         for microbatch_idx, partition_idx in schedule:
             result = self.out_queues[partition_idx].get()
             batches[microbatch_idx] = result
