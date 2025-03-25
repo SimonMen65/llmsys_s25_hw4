@@ -70,9 +70,9 @@ class Pipe(nn.Module):
             print(f"  Clock {cycle_idx}: {clock}")
 
         for clock in schedule:
-            self.compute(batches, clock)
+            self.compute(microbatches, clock)
 
-        return torch.cat(batches, dim=0).to(self.devices[-1])
+        return torch.cat(microbatches, dim=0).to(self.devices[-1])
 
 
     # ASSIGNMENT 4.2
