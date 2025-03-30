@@ -61,17 +61,24 @@ class Pipe(nn.Module):
         
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
-        microbatches = list(torch.chunk(x, self.split_size, dim=0))
+        # microbatches = list(torch.chunk(x, self.split_size, dim=0))
 
-        schedule = list(_clock_cycles(num_batches=self.split_size, num_partitions=len(self.partitions)))
-        print(f"[DEBUG] Pipeline Schedule (split_size={self.split_size}, num_partitions={len(self.partitions)}) \t Len Batch is {len(microbatches)}:")
-        for cycle_idx, clock in enumerate(schedule):
-            print(f"  Clock {cycle_idx}: {clock}")
+        # schedule = list(_clock_cycles(num_batches=self.split_size, num_partitions=len(self.partitions)))
+        # print(f"[DEBUG] Pipeline Schedule (split_size={self.split_size}, num_partitions={len(self.partitions)}) \t Len Batch is {len(microbatches)}:")
+        # for cycle_idx, clock in enumerate(schedule):
+        #     print(f"  Clock {cycle_idx}: {clock}")
 
-        for clock in schedule:
-            self.compute(microbatches, clock)
+        # for clock in schedule:
+        #     self.compute(microbatches, clock)
 
-        return torch.cat(microbatches, dim=0).to(self.devices[-1])
+        # return torch.cat(microbatches, dim=0).to(self.devices[-1])
+
+        micro_x = list(x.split(self.split_size, dim=0))
+        schedule = _clock_cycles(len(micro_x), len(self.partitions))
+
+        for sch_t in schedule:
+            self.compute(micro_x, sch_t)
+        return torch.cat(micro_x, dim=0).to(self.devices[-1])
 
 
     # ASSIGNMENT 4.2
