@@ -39,8 +39,8 @@ def average_gradients(model):
     world_size = dist.get_world_size()
     for param in model.parameters():
         if param.grad is not None:
-            dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
             param.grad.data /= world_size
+            dist.all_reduce(param.grad.data)
     # END SOLUTION
 
 # ASSIGNMENT 4.1
