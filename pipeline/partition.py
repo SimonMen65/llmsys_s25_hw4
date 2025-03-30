@@ -58,28 +58,19 @@ def _split_module(modules: nn.Sequential) -> Tuple[List[nn.Sequential], List[tor
     current_partition = []
     current_device = None
     for name, module in modules.named_children():
-        # Check if it's wrapped in WithDevice
+        # BEGIN SOLUTION
         if isinstance(module, WithDevice):
-            device = module.device
-            actual_module = module.module
+            next_device = module.device
         else:
-            device = _retrieve_device(module)
-            actual_module = module
-
-        # Start a new partition if device changes
-        if current_device is None:
-            current_device = device
-
-        if device != current_device:
-            # Finish current partition
+            next_device = _retrieve_device(module)
+        if next_device == current_device or current_device is None:
+            current_partition.append(module)
+            current_device = next_device
+        else:
             partitions.append(_assemble_partition(current_partition))
             devices.append(current_device)
-
-            # Start new one
-            current_partition = [actual_module]
-            current_device = device
-        else:
-            current_partition.append(actual_module)
+            current_partition, current_device = [module], next_device
+        # END SOLUTION
 
     if current_device is not None:
         partitions.append(_assemble_partition(current_partition))
