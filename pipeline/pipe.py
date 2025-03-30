@@ -74,7 +74,7 @@ class Pipe(nn.Module):
         # return torch.cat(microbatches, dim=0).to(self.devices[-1])
 
         micro_x = list(x.split(self.split_size, dim=0))
-        schedule = _clock_cycles(len(micro_x), len(self.partitions))
+        schedule = list(_clock_cycles(len(micro_x), len(self.partitions)))
 
         for sch_t in schedule:
             self.compute(micro_x, sch_t)
