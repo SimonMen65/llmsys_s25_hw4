@@ -42,6 +42,8 @@ class GPT2ModelParallel(GPT2ModelCustom):
 
         # BEGIN SOLUTION
         self.pipeline_parallel = True
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.h.to(device)
         pipe =  Pipe(nn.Sequential(self.h), split_size)
         self.h_pp = pipe
 
