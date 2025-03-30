@@ -67,21 +67,6 @@ class Pipe(nn.Module):
         for sch in schedule:
             self.compute(microbatches, sch)
         return torch.cat(microbatches, dim=0).to(self.devices[-1])
-        # print(f"[DEBUG] Pipeline Schedule (split_size={self.split_size}, num_partitions={len(self.partitions)}) \t Len Batch is {len(microbatches)}:")
-        # for cycle_idx, clock in enumerate(schedule):
-        #     print(f"  Clock {cycle_idx}: {clock}")
-
-        # for clock in schedule:
-        #     self.compute(microbatches, clock)
-
-        # return torch.cat(microbatches, dim=0).to(self.devices[-1])
-
-        micro_x = list(x.split(self.split_size, dim=0))
-        schedule = list(_clock_cycles(len(micro_x), len(self.partitions)))
-
-        for sch_t in schedule:
-            self.compute(micro_x, sch_t)
-        return torch.cat(micro_x, dim=0).to(self.devices[-1])
 
 
     # ASSIGNMENT 4.2
