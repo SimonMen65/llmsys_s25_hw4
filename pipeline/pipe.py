@@ -28,6 +28,7 @@ def _clock_cycles(num_batches: int, num_partitions: int) -> Iterable[List[Tuple[
     '''
     '''Generate schedules for each clock cycle.'''
     total_cycles = num_batches + num_partitions - 1
+    schedules = []
 
     for clock in range(total_cycles):
         tasks = []
@@ -35,7 +36,8 @@ def _clock_cycles(num_batches: int, num_partitions: int) -> Iterable[List[Tuple[
             partition = clock - microbatch
             if 0 <= partition < num_partitions:
                 tasks.append((microbatch, partition))
-        yield tasks
+        schedules.append(tasks)
+    return schedules
 
 class Pipe(nn.Module):
     def __init__(
@@ -63,7 +65,7 @@ class Pipe(nn.Module):
         '''
         microbatches = list(x.split(self.split_size, dim=0))
 
-        schedule = list(_clock_cycles(num_batches=len(microbatches), num_partitions=len(self.partitions)))
+        schedule = (_clock_cycles(num_batches=len(microbatches), num_partitions=len(self.partitions)))
         for sch in schedule:
             self.compute(microbatches, sch)
         return torch.cat(microbatches, dim=0).to(self.devices[-1])
