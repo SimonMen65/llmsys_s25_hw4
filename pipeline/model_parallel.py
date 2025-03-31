@@ -42,8 +42,16 @@ class GPT2ModelParallel(GPT2ModelCustom):
 
         # BEGIN SOLUTION
         self.pipeline_parallel = True
-        pipe =  Pipe(nn.Sequential(self.h), split_size)
-        self.h_pp = pipe
+        # Wrap each block with ExtractFirstItem and store it
+        wrapped_blocks = [
+            nn.Sequential(layer, ExtractFirstItem()) for layer in self.h
+        ]
+
+        # Combine all wrapped blocks into a single sequential model
+        full_sequence = nn.Sequential(*wrapped_blocks)
+
+        # Set up pipeline parallelism using the wrapped sequential model
+        self.h_pp = Pipe(full_sequence, split_size=split_size)
 
 class GPT2LMHeadModelParallel(GPT2LMHeadModelCustom):
     _tied_weights_keys = ["lm_head.weight"]
