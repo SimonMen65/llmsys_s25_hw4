@@ -61,7 +61,7 @@ class Pipe(nn.Module):
         
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
-        microbatches = list(torch.chunk(x, self.split_size, dim=0))
+        microbatches = list(x.split(self.split_size, dim=0))
 
         schedule = list(_clock_cycles(num_batches=len(microbatches), num_partitions=len(self.partitions)))
         for sch in schedule:
