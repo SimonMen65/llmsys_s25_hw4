@@ -83,24 +83,29 @@ class Pipe(nn.Module):
         '''
         partitions = self.partitions
         devices = self.devices
-        
+
+        inp_qs, out_qs = create_workers(devices)
         for microbatch_idx, partition_idx in schedule:
-            partition = self.partitions[partition_idx]
-            device = self.devices[partition_idx]
-
-            # Ensure input batch is moved to correct device before sending
-            input_batch = batches[microbatch_idx].to(device)
-
-            # Wrap the computation in a device-correct lambda
-            task = Task(lambda module=partition, x=input_batch: module(x))
-            self.in_queues[partition_idx].put(task)
+            inp_qs[partition_idx].put(
+                Task(
+                    partial(
+                        partitions[partition_idx].to(devices[partition_idx]), 
+                        batches[microbatch_idx].to(devices[partition_idx])
+                    )
+                )
+            )
 
         for microbatch_idx, partition_idx in schedule:
-            success, result = self.out_queues[partition_idx].get()
-            if success:
-                task, output = result
-                batches[microbatch_idx] = output
-            else:
-                exc_info = result  # <-- result is (exc_type, exc_val, tb)
-                raise exc_info[1].with_traceback(exc_info[2])
+            ot = (False, None)
+            while ot[1] is None:
+                ot = out_qs[partition_idx].get()
+            batches[microbatch_idx] = ot[1][1]
+            
+            # success, result = self.out_queues[partition_idx].get()
+            # if success:
+            #     task, output = result
+            #     batches[microbatch_idx] = output
+            # else:
+            #     exc_info = result  # <-- result is (exc_type, exc_val, tb)
+            #     raise exc_info[1].with_traceback(exc_info[2])
 
