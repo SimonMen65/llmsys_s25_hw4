@@ -77,5 +77,4 @@ def _split_module(modules: nn.Sequential) -> Tuple[List[nn.Sequential], List[tor
         devices.append(current_device)
 
     partitions = nn.ModuleList(partitions)
-
     return partitions, devices
