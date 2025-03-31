@@ -28,7 +28,6 @@ def _clock_cycles(num_batches: int, num_partitions: int) -> Iterable[List[Tuple[
     '''
     '''Generate schedules for each clock cycle.'''
     total_cycles = num_batches + num_partitions - 1
-    schedules = []
 
     for clock in range(total_cycles):
         tasks = []
@@ -36,8 +35,7 @@ def _clock_cycles(num_batches: int, num_partitions: int) -> Iterable[List[Tuple[
             partition = clock - microbatch
             if 0 <= partition < num_partitions:
                 tasks.append((microbatch, partition))
-        schedules.append(tasks)
-    return schedules
+        yield tasks
 
 class Pipe(nn.Module):
     def __init__(
@@ -63,9 +61,9 @@ class Pipe(nn.Module):
         
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
-        microbatches = list(x.split(self.split_size, dim=0))
+        microbatches = list(torch.chunk(x, self.split_size, dim=0))
 
-        schedule = (_clock_cycles(num_batches=len(microbatches), num_partitions=len(self.partitions)))
+        schedule = list(_clock_cycles(num_batches=len(microbatches), num_partitions=len(self.partitions)))
         for sch in schedule:
             self.compute(microbatches, sch)
         return torch.cat(microbatches, dim=0).to(self.devices[-1])
@@ -83,29 +81,24 @@ class Pipe(nn.Module):
         '''
         partitions = self.partitions
         devices = self.devices
-
-        inp_qs, out_qs = create_workers(devices)
+        
         for microbatch_idx, partition_idx in schedule:
-            inp_qs[partition_idx].put(
-                Task(
-                    partial(
-                        partitions[partition_idx].to(devices[partition_idx]), 
-                        batches[microbatch_idx].to(devices[partition_idx])
-                    )
-                )
-            )
+            partition = self.partitions[partition_idx]
+            device = self.devices[partition_idx]
+
+            # Ensure input batch is moved to correct device before sending
+            input_batch = batches[microbatch_idx].to(device)
+
+            # Wrap the computation in a device-correct lambda
+            task = Task(lambda module=partition, x=input_batch: module(x))
+            self.in_queues[partition_idx].put(task)
 
         for microbatch_idx, partition_idx in schedule:
-            ot = (False, None)
-            while ot[1] is None:
-                ot = out_qs[partition_idx].get()
-            batches[microbatch_idx] = ot[1][1]
-            
-            # success, result = self.out_queues[partition_idx].get()
-            # if success:
-            #     task, output = result
-            #     batches[microbatch_idx] = output
-            # else:
-            #     exc_info = result  # <-- result is (exc_type, exc_val, tb)
-            #     raise exc_info[1].with_traceback(exc_info[2])
+            success, result = self.out_queues[partition_idx].get()
+            if success:
+                task, output = result
+                batches[microbatch_idx] = output
+            else:
+                exc_info = result  # <-- result is (exc_type, exc_val, tb)
+                raise exc_info[1].with_traceback(exc_info[2])
 
