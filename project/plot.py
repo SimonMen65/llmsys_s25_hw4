@@ -3,7 +3,7 @@ plt.switch_backend('Agg')
 import numpy as np
 import os, json
 
-def plot(ax, means, stds, labels, ylabel):
+def plot(ax, means, stds, labels, ylabel, title):
     """
     Plot a bar chart with error bars on the given axes.
 
@@ -11,15 +11,19 @@ def plot(ax, means, stds, labels, ylabel):
         ax (matplotlib.axes.Axes): The axes to plot on.
         means (list): List of mean values.
         stds (list): List of standard deviations.
-        labels (list): List of labels for each bar.
-        ylabel (str): Label for the y-axis.
+        labels (list): Labels for each bar.
+        ylabel (str): Y-axis label.
+        title (str): Title for the subplot.
     """
-    ax.bar(np.arange(len(means)), means, yerr=stds,
-           align='center', alpha=0.5, ecolor='red', capsize=10, width=0.6)
+    x = np.arange(len(means))
+    ax.bar(x, means, yerr=stds, align='center', alpha=0.6,
+           ecolor='black', capsize=10, width=0.6)
     ax.set_ylabel(ylabel)
-    ax.set_xticks(np.arange(len(means)))
+    ax.set_xticks(x)
     ax.set_xticklabels(labels)
+    ax.set_title(title)
     ax.yaxis.grid(True)
+    ax.set_ylim(bottom=0)
 
 def load_stats(rank, epochs=10, workdir='./workdir'):
     """
@@ -116,13 +120,27 @@ def plot_1_3():
     plt.savefig('combined_comparison.png')
     plt.close(fig)
 
-# Fill the data points here
-if __name__ == '__main__':
-    plot_1_3()
+def plot_2_3():
+    # === Manually defined stats ===
+    labels = [ 'Model Parallel', 'Pipeline Parallel']
 
-    # pp_mean, pp_std = None, None
-    # mp_mean, mp_std = None, None
-    # plot([pp_mean, mp_mean],
-    #     [pp_std, mp_std],
-    #     ['Pipeline Parallel', 'Model Parallel'],
-    #     'pp_vs_mp.png')
+    # Replace these with your actual numbers:
+    time_means = [52.86895143985748, 48.65150594711304]         # Example: average training times
+    time_stds = [0.032663941383361816, 0.14301300048828125]
+
+    tokens_means = [12105.40831368303, 13154.89660099964]    # Example: tokens per second
+    tokens_stds = [7.479065440319573, 38.669331964094454]
+
+    # === Plotting ===
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+    plot(axs[0], time_means, time_stds, labels, 'Execution Time (s)', 'Training Time Comparison')
+    plot(axs[1], tokens_means, tokens_stds, labels, 'Tokens per Second', 'Throughput Comparison')
+
+    plt.tight_layout()
+    plt.savefig('pp_vs_mp_comparison.png')
+    plt.close(fig)
+    print("Plot saved to 'pp_vs_mp_comparison.png'")
+
+if __name__ == '__main__':
+    plot_2_3()
