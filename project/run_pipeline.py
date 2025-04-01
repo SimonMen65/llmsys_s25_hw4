@@ -34,7 +34,8 @@ def run_pp(
     n_chunk = 4, # the number of microbatches for pipeline parallelism
     learning_rate=1e-4,
     device='cuda',
-    model_parallel_mode=None):
+    model_parallel_mode=None,
+    pytest=False):
     workdir = f'./workdir'
     os.makedirs(workdir, exist_ok=True)
 
@@ -177,5 +178,6 @@ if __name__ == '__main__':
         n_chunk=args.n_chunk,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
-        model_parallel_mode=args.model_parallel_mode
+        model_parallel_mode=args.model_parallel_mode,
+        pytest=PYTEST
     )
