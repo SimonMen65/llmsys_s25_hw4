@@ -53,13 +53,6 @@ class GPT2ModelParallel(GPT2ModelCustom):
         # Set up pipeline parallelism using the wrapped sequential model
         self.h_pp = Pipe(full_sequence, split_size=split_size)
 
-        # pipeline_layers = []
-        # for block in self.h:
-        #     block_sequence = nn.Sequential(block, ExtractFirstItem())
-        #     pipeline_layers.append(block_sequence)
-        
-        # sequential = nn.Sequential(*pipeline_layers)
-
 class GPT2LMHeadModelParallel(GPT2LMHeadModelCustom):
     _tied_weights_keys = ["lm_head.weight"]
 
